@@ -20,7 +20,6 @@ import com.android.dialer.lookup.LookupSettings;
 import com.android.services.telephony.common.MoreStrings;
 
 import android.content.Context;
-import android.text.Html;
 import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
@@ -34,6 +33,8 @@ import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
+
+import android.text.Html;
 
 public class WhitePagesApi {
     private static final String TAG = WhitePagesApi.class.getSimpleName();
