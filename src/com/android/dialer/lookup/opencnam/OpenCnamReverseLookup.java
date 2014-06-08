@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Xiao-Long Chen <chenxiaolong@cxl.epac.to>
+ * Copyright (C) 2014 Xiao-Long Chen <chillermillerlong@hotmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,20 @@
 
 package com.android.dialer.lookup.opencnam;
 
+import com.android.dialer.calllog.ContactInfo;
+import com.android.dialer.lookup.ContactBuilder;
 import com.android.dialer.lookup.ReverseLookup;
-import com.android.incallui.service.PhoneNumberServiceImpl.PhoneNumberInfoImpl;
 
 import android.content.Context;
+import android.net.Uri;
+import android.provider.Settings;
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.Pair;
 
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 
+import org.apache.http.HttpStatus;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
@@ -42,18 +47,11 @@ public class OpenCnamReverseLookup extends ReverseLookup {
     private static final String LOOKUP_URL =
             "https://api.opencnam.com/v2/phone/";
 
-    public OpenCnamReverseLookup(Context context) {
-    }
+    /** Query parameters for paid accounts */
+    private static final String ACCOUNT_SID = "account_sid";
+    private static final String AUTH_TOKEN = "auth_token";
 
-    /**
-     * Lookup image
-     *
-     * @param context The application context
-     * @param url The image URL
-     * @param data Extra data (a authentication token, perhaps)
-     */
-    public byte[] lookupImage(Context context, String url, Object data) {
-        return null;
+    public OpenCnamReverseLookup(Context context) {
     }
 
     /**
@@ -62,15 +60,18 @@ public class OpenCnamReverseLookup extends ReverseLookup {
      * @param context The application context
      * @param normalizedNumber The normalized phone number
      * @param formattedNumber The formatted phone number
-     * @param isIncoming Whether the call is incoming or outgoing
      * @return The phone number info object
      */
-    public Pair<PhoneNumberInfoImpl, Object> lookupNumber(
-            Context context, String normalizedNumber, String formattedNumber,
-            boolean isIncoming) {
+    public Pair<ContactInfo, Object> lookupNumber(Context context,
+            String normalizedNumber, String formattedNumber) {
         String displayName;
+
+        if (normalizedNumber.startsWith("+") &&!normalizedNumber.startsWith("+1")) {
+            // Any non-US number will return "We currently accept only US numbers"
+            return null;
+        }
         try {
-            displayName = httpGetRequest(normalizedNumber);
+            displayName = httpGetRequest(context, normalizedNumber);
             if (DEBUG) Log.d(TAG, "Reverse lookup returned name: " + displayName);
         } catch (IOException e) {
             return null;
@@ -88,6 +89,7 @@ public class OpenCnamReverseLookup extends ReverseLookup {
                 ? formattedNumber : normalizedNumber;
 
         ContactBuilder builder = new ContactBuilder(
+                ContactBuilder.REVERSE_LOOKUP,
                 normalizedNumber, formattedNumber);
 
         ContactBuilder.Name n = new ContactBuilder.Name();
@@ -104,11 +106,34 @@ public class OpenCnamReverseLookup extends ReverseLookup {
         return Pair.create(builder.build(), null);
     }
 
-    private String httpGetRequest(String number) throws IOException {
+    private String httpGetRequest(Context context, String number) throws IOException {
+        Uri.Builder builder = Uri.parse(LOOKUP_URL + number).buildUpon();
+
+        // Paid account
+        String accountSid = Settings.System.getString(
+                context.getContentResolver(),
+                Settings.System.DIALER_OPENCNAM_ACCOUNT_SID);
+        String authToken = Settings.System.getString(
+                context.getContentResolver(),
+                Settings.System.DIALER_OPENCNAM_AUTH_TOKEN);
+
+        if (!TextUtils.isEmpty(accountSid) && !TextUtils.isEmpty(authToken)) {
+            Log.d(TAG, "Using paid account");
+
+            builder.appendQueryParameter(ACCOUNT_SID, accountSid);
+            builder.appendQueryParameter(AUTH_TOKEN, authToken);
+        }
+
+        String url = builder.build().toString();
+
         HttpClient client = new DefaultHttpClient();
-        HttpGet request = new HttpGet(LOOKUP_URL + number);
+        HttpGet request = new HttpGet(url);
 
         HttpResponse response = client.execute(request);
+
+        if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+            throw new IOException();
+        }
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         response.getEntity().writeTo(out);
