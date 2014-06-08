@@ -34,6 +34,19 @@
     <!-- Color for dialpad separator lines -->
     <color name="dialpad_separator_line_color">#dadada</color>
 
+    <!-- Background color of dialpad -->
+    <color name="background_dialpad">#ff111111</color>
+    <!-- Pressed color of dialpad buttons -->
+    <color name="background_dialpad_pressed">#ececec</color>
+    <!-- Primary color of dialpad text, including the call button -->
+    <color name="dialpad_primary_text_color">#ffffff</color>
+    <!-- Secondary color of dialpad text (used for the letters corresponding to each digit -->
+    <color name="dialpad_secondary_text_color">#ffffff</color>
+    <!-- Color of dialpad digits -->
+    <color name="dialpad_digits_text_color">#ffffff</color>
+    <!-- Color for dialpad separator lines -->
+    <color name="dialpad_separator_line_color">#dadada</color>
+
     <!-- Color of the text describing an unconsumed missed call. -->
     <color name="call_log_missed_call_highlight_color">#FF0000</color>
 
